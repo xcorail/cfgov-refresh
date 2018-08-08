@@ -1,7 +1,10 @@
 from __future__ import unicode_literals
 
 from django.conf import settings
+from django.conf.urls import url
 from django.contrib.auth.decorators import login_required
+from django.core.urlresolvers import reverse
+from django.http import HttpResponse
 from django.utils.decorators import method_decorator
 from django.utils.html import format_html, format_html_join
 
@@ -9,10 +12,14 @@ from wagtail.contrib.modeladmin.options import (
     ModelAdmin, ModelAdminGroup, modeladmin_register
 )
 from wagtail.contrib.modeladmin.views import EditView
+from wagtail.wagtailadmin.menu import MenuItem
 from wagtail.wagtailcore import hooks
 from wagtail.wagtailcore.whitelist import attribute_rule
 
+import unicodecsv
+
 from ask_cfpb.models import Answer, Audience, Category, NextStep, SubCategory
+from ask_cfpb.scripts import export_ask_data
 
 
 class AnswerModelAdminSaveUserEditView(EditView):
@@ -93,6 +100,17 @@ class MyModelAdminGroup(ModelAdminGroup):
         NextStepModelAdmin)
 
 
+def export_data(request):
+    response = HttpResponse(content_type='text/csv; charset=utf-8')
+    response['Content-Disposition'] = 'attachment;filename=answers.csv'
+    writer = unicodecsv.writer(response, encoding='windows-1252')
+    headings = export_ask_data.HEADINGS
+    writer.writerow(headings)
+    for row in export_ask_data.assemble_output():
+        writer.writerow([row.get(key) for key in headings])
+    return response
+
+
 def editor_js():
     js_files = [
         'js/html_editor.js',
@@ -133,3 +151,19 @@ hooks.register('insert_editor_js', editor_js)
 hooks.register('insert_editor_css', editor_css)
 hooks.register(
     'construct_whitelister_element_rules', whitelister_element_rules)
+
+
+@hooks.register('register_admin_menu_item')
+def register_export_menu_item():
+    return MenuItem(
+        'Export Ask data',
+        reverse('export-ask'),
+        classnames='icon icon-download',
+        order=99999,
+    )
+
+
+@hooks.register('register_admin_urls')
+def register_export_url():
+    handler = 'ask_cfpb.wagtail_hooks.export_data'
+    return [url('export-ask', handler, name='export-ask'), ]
