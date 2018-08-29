@@ -32,9 +32,9 @@
      {% if video_url.find( '?' ) == -1 -%}
         {% set video_url = video_url ~ '?'  %}
     {% endif %}
-    {% if video_url.find( 'autoplay=' ) == -1 -%}
+    {# if video_url.find( 'autoplay=' ) == -1 -%}
         {% set video_url = _buildParam( video_url, 'autoplay=1' )  %}
-    {% endif %}
+    {% endif #}
     {% set video_id = video_url.split('?')[0].split('/') | last if video_id == '' else video_id %}
     {% if video_url.find( 'enablejsapi=' ) == -1 -%}
         {% set video_url = _buildParam( video_url, 'enablejsapi=1' )  %}
